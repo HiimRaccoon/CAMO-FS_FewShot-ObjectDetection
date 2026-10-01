@@ -26,23 +26,22 @@ This makes CAMO-FS more challenging than conventional object detection datasets 
 
 CAMO-FS contains camouflaged objects in different natural environments such as forests, rocks, grass, trees, and underwater scenes.
 
-### Example 1
-
-<!-- Add an example image here -->
-
-![Example 1](docs/images/example_1.jpg)
-
-### Example 2
-
-<!-- Add an example image here -->
-
-![Example 2](docs/images/example_2.jpg)
-
-### Example 3
-
-<!-- Add an example image here -->
-
-![Example 3](docs/images/example_3.jpg)
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/camouflage_00001466.jpg" width="280"><br>
+      <b>Horned Lizard</b>
+    </td>
+    <td align="center">
+      <img src="docs/images/camouflage_00001807.jpg" width="280"><br>
+      <b>Crab</b>
+    </td>
+    <td align="center">
+      <img src="docs/images/camouflage_00002197.jpg" width="280"><br>
+      <b>Dead Leaf Mantis</b>
+    </td>
+  </tr>
+</table>
 
 ---
 

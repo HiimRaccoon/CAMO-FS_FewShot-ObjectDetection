@@ -11,10 +11,14 @@ def test_default_kaggle_paths() -> None:
     assert paths.data_root == Path("/kaggle/input/datasets/danhnt/camo-fs-dataset")
     assert paths.work_root == Path("/kaggle/working")
     assert paths.images_dir == Path(
-        "/kaggle/input/datasets/danhnt/camo-fs-dataset/images"
+        "/kaggle/input/datasets/danhnt/camo-fs-dataset/images/images"
+    )
+    assert paths.annotations_root == Path(
+        "/kaggle/input/datasets/danhnt/camo-fs-dataset/few-shot-annotations"
     )
     assert paths.few_shot_dir == Path(
-        "/kaggle/input/datasets/danhnt/camo-fs-dataset/few-shot-annotations"
+        "/kaggle/input/datasets/danhnt/camo-fs-dataset/"
+        "few-shot-annotations/subsplit/split1"
     )
     assert paths.test_json == Path(
         "/kaggle/input/datasets/danhnt/camo-fs-dataset/"
@@ -33,8 +37,9 @@ def test_custom_roots_for_fixture(tmp_path: Path) -> None:
 
     assert paths.data_root == data_root
     assert paths.work_root == work_root
-    assert paths.images_dir == data_root / "images"
-    assert paths.few_shot_dir == data_root / "few-shot-annotations"
+    assert paths.images_dir == data_root / "images" / "images"
+    assert paths.annotations_root == data_root / "few-shot-annotations"
+    assert paths.few_shot_dir == data_root / "few-shot-annotations/subsplit/split1"
     assert paths.test_json == data_root / "few-shot-annotations/camo5_test_split1.json"
     assert paths.prepared_root == work_root / "camo_fs_yolo"
     assert paths.runs_root == work_root / "runs"
@@ -46,3 +51,10 @@ def test_rejects_output_inside_input(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="work_root.*data_root"):
         DatasetPaths.from_root(data_root=data_root, work_root=data_root / "generated")
+
+
+def test_rejects_output_anywhere_under_kaggle_input() -> None:
+    with pytest.raises(ValueError, match="work_root.*kaggle/input"):
+        DatasetPaths.from_root(
+            work_root=Path("/kaggle/input/another-dataset/generated")
+        )

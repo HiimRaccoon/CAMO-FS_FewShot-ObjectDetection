@@ -2,7 +2,7 @@
 
 **Plan:** [camo-fs-yolo-plans.md](camo-fs-yolo-plans.md)  
 **Spec:** [camo-fs-yolo-spec.md](camo-fs-yolo-spec.md)  
-**Status:** Not started. Check a step only after its evidence exists.
+**Status:** In progress — T01 complete. Check a step only after its evidence exists.
 
 ## Dependency graph
 
@@ -32,11 +32,11 @@ The graph shows prerequisites, not an instruction to run experiments concurrentl
 **Produces:** `DatasetPaths.from_root(data_root: Path, work_root: Path)` and an editable package.  
 **Acceptance:** Input paths follow the official Kaggle tree by default; output roots are never under `/kaggle/input`; a caller can override roots for synthetic/local tests.
 
-- [ ] Write `test_default_kaggle_paths`, `test_custom_roots_for_fixture`, and `test_rejects_output_inside_input`. Assert every resolved path, not just object construction.
-- [ ] Run `pytest -q tests/test_paths.py`; confirm the tests fail because the package/API does not exist.
-- [ ] Implement the immutable `DatasetPaths` interface. Add package/test metadata and generated-artifact ignores; do not ignore source docs or silently discard existing untracked work.
-- [ ] Run `pytest -q tests/test_paths.py`, then `pytest -q`; record actual pass/fail output.
-- [ ] Check `git status --short` to ensure `data/` and checkpoint artifacts were not staged or written.
+- [x] Write `test_default_kaggle_paths`, `test_custom_roots_for_fixture`, and `test_rejects_output_inside_input`. Assert every resolved path, not just object construction.
+- [x] Run `pytest -q tests/test_paths.py`; confirm the tests fail because the package/API does not exist.
+- [x] Implement the immutable `DatasetPaths` interface. Add package/test metadata and generated-artifact ignores; do not ignore source docs or silently discard existing untracked work.
+- [x] Run `pytest -q tests/test_paths.py`, then `pytest -q`; record actual pass/fail output.
+- [x] Check `git status --short` to ensure `data/` and checkpoint artifacts were not staged or written.
 
 ## T02 — Canonical taxonomy and read-only shot audit
 

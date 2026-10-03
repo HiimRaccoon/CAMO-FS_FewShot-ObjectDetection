@@ -17,6 +17,8 @@ def annotation_to_yolo(
 ) -> tuple[str, bool]:
     """Convert one validated polygon instance into one normalized YOLO label line."""
     width, height = _image_dimensions(image)
+    if annotation.get("image_id") != image.get("id"):
+        raise DataIntegrityError("Annotation image_id must match the supplied image")
     category_id = annotation.get("category_id")
     if not isinstance(category_id, int) or category_id not in category_to_index:
         raise DataIntegrityError("Annotation category is absent from the canonical taxonomy")
@@ -59,28 +61,42 @@ def _validate_polygons(segmentation: object, width: float, height: float) -> lis
         points = [(float(polygon[index]), float(polygon[index + 1])) for index in range(0, len(polygon), 2)]
         if any(x < 0 or y < 0 or x > width or y > height for x, y in points):
             raise DataIntegrityError("Polygon coordinates are outside image bounds")
+        if len(set(points)) < 3 or _polygon_area(points) <= 1e-9:
+            raise DataIntegrityError("Polygon must have at least three distinct non-collinear points")
         components.append(points)
     return components
 
 
 def _merge_components(components: list[list[tuple[float, float]]]) -> list[tuple[float, float]]:
-    merged = components[0]
-    for component in components[1:]:
-        left_index, right_index = min(
-            (
-                (left_index, right_index)
-                for left_index in range(len(merged))
-                for right_index in range(len(component))
-            ),
-            key=lambda indices: (
-                _squared_distance(merged[indices[0]], component[indices[1]]),
-                indices[0],
-                indices[1],
-            ),
-        )
-        # YOLO stores one polygon per instance. Rotating at nearest boundaries keeps
-        # every COCO component but introduces connecting edges between disconnected parts.
-        merged = _rotate(merged, left_index) + _rotate(component, right_index)
+    if len(components) == 1:
+        return components[0]
+
+    # This is a deterministic, pure-Python translation of Ultralytics'
+    # merge_multi_segment. Each contour is closed at its nearest bridge point;
+    # middle contours are traversed on the return pass, so disconnected regions
+    # connect by thin out-and-back bridges instead of enclosing the wide gap.
+    segments = [component.copy() for component in components]
+    connection_indices: list[list[int]] = [[] for _ in segments]
+    for index in range(1, len(segments)):
+        left_index, right_index = _nearest_indices(segments[index - 1], segments[index])
+        connection_indices[index - 1].append(left_index)
+        connection_indices[index].append(right_index)
+
+    merged: list[tuple[float, float]] = []
+    for index, indices in enumerate(connection_indices):
+        if len(indices) == 2 and indices[0] > indices[1]:
+            indices = indices[::-1]
+            segments[index] = segments[index][::-1]
+        segments[index] = _rotate(segments[index], indices[0])
+        segments[index] = [*segments[index], segments[index][0]]
+        if index in {0, len(segments) - 1}:
+            merged.extend(segments[index])
+        else:
+            merged.extend(segments[index][: indices[1] - indices[0] + 1])
+
+    for index in range(len(segments) - 2, 0, -1):
+        first_index, second_index = connection_indices[index]
+        merged.extend(segments[index][abs(second_index - first_index) :])
     return merged
 
 
@@ -90,6 +106,32 @@ def _rotate(points: list[tuple[float, float]], index: int) -> list[tuple[float, 
 
 def _squared_distance(left: tuple[float, float], right: tuple[float, float]) -> float:
     return (left[0] - right[0]) ** 2 + (left[1] - right[1]) ** 2
+
+
+def _nearest_indices(
+    left: list[tuple[float, float]], right: list[tuple[float, float]]
+) -> tuple[int, int]:
+    return min(
+        (
+            (left_index, right_index)
+            for left_index in range(len(left))
+            for right_index in range(len(right))
+        ),
+        key=lambda indices: (
+            _squared_distance(left[indices[0]], right[indices[1]]),
+            indices[0],
+            indices[1],
+        ),
+    )
+
+
+def _polygon_area(points: list[tuple[float, float]]) -> float:
+    return abs(
+        sum(
+            point[0] * next_point[1] - next_point[0] * point[1]
+            for point, next_point in zip(points, [*points[1:], points[0]], strict=True)
+        )
+    ) / 2
 
 
 def _is_finite_number(value: object) -> bool:

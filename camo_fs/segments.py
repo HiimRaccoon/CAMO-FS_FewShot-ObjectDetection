@@ -17,8 +17,16 @@ def annotation_to_yolo(
 ) -> tuple[str, bool]:
     """Convert one validated polygon instance into one normalized YOLO label line."""
     width, height = _image_dimensions(image)
-    if annotation.get("image_id") != image.get("id"):
-        raise DataIntegrityError("Annotation image_id must match the supplied image")
+    annotation_image_id = annotation.get("image_id")
+    image_id = image.get("id")
+    if (
+        not isinstance(annotation_image_id, int)
+        or isinstance(annotation_image_id, bool)
+        or not isinstance(image_id, int)
+        or isinstance(image_id, bool)
+        or annotation_image_id != image_id
+    ):
+        raise DataIntegrityError("Annotation and image must have matching integer image IDs")
     category_id = annotation.get("category_id")
     if not isinstance(category_id, int) or category_id not in category_to_index:
         raise DataIntegrityError("Annotation category is absent from the canonical taxonomy")
@@ -71,10 +79,9 @@ def _merge_components(components: list[list[tuple[float, float]]]) -> list[tuple
     if len(components) == 1:
         return components[0]
 
-    # This is a deterministic, pure-Python translation of Ultralytics'
-    # merge_multi_segment. Each contour is closed at its nearest bridge point;
-    # middle contours are traversed on the return pass, so disconnected regions
-    # connect by thin out-and-back bridges instead of enclosing the wide gap.
+    # YOLO accepts one contour per instance, so disconnected components require
+    # a topology compromise. Deterministic nearest-boundary out-and-back bridges
+    # preserve every component while avoiding a large enclosed gap between them.
     segments = [component.copy() for component in components]
     connection_indices: list[list[int]] = [[] for _ in segments]
     for index in range(1, len(segments)):

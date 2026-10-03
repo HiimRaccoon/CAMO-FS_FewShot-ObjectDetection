@@ -102,7 +102,10 @@ def test_multi_polygon_merge_does_not_fill_large_gap_between_components() -> Non
     )
 
     coordinates = _coordinates(line)
-    merged_points = [(x * 100, y * 100) for x, y in zip(coordinates[::2], coordinates[1::2], strict=True)]
+    merged_points = [
+        (round(x * 100, 8), round(y * 100, 8))
+        for x, y in zip(coordinates[::2], coordinates[1::2], strict=True)
+    ]
     merged_mask = _rasterize_even_odd(merged_points, 100, 100)
     source_mask = set()
     for component in components:
@@ -110,6 +113,34 @@ def test_multi_polygon_merge_does_not_fill_large_gap_between_components() -> Non
         source_mask |= _rasterize_even_odd(source_points, 100, 100)
 
     assert len(merged_mask) <= len(source_mask) + 4
+
+
+def test_three_component_merge_preserves_middle_return_path() -> None:
+    image = {**IMAGE, "width": 100, "height": 100}
+    components = [
+        [5, 5, 15, 5, 15, 15, 5, 15],
+        [45, 5, 55, 5, 55, 15, 45, 15],
+        [85, 5, 95, 5, 95, 15, 85, 15],
+    ]
+    annotation = _annotation(components, bbox=[5, 5, 90, 10])
+
+    first_line, multi_polygon = annotation_to_yolo(annotation, image, CATEGORY_TO_INDEX)
+    second_line, _ = annotation_to_yolo(annotation, image, CATEGORY_TO_INDEX)
+
+    coordinates = _coordinates(first_line)
+    merged_points = [
+        (round(x * 100, 8), round(y * 100, 8))
+        for x, y in zip(coordinates[::2], coordinates[1::2], strict=True)
+    ]
+    source_mask = set()
+    for component in components:
+        source_points = list(zip(component[::2], component[1::2], strict=True))
+        source_mask |= _rasterize_even_odd(source_points, 100, 100)
+
+    assert multi_polygon is True
+    assert first_line == second_line
+    assert {(5, 5), (15, 5), (45, 5), (55, 5), (85, 5), (95, 5)} <= set(merged_points)
+    assert len(_rasterize_even_odd(merged_points, 100, 100)) <= len(source_mask) + 8
 
 
 @pytest.mark.parametrize(
@@ -140,7 +171,7 @@ def test_annotation_to_yolo_rejects_nonfinite_bbox() -> None:
         annotation_to_yolo(_annotation(bbox=[0, 0, math.inf, 1]), IMAGE, CATEGORY_TO_INDEX)
 
 
-def test_annotation_to_yolo_rejects_repeated_point_polygon() -> None:
+def test_annotation_to_yolo_rejects_polygon_with_fewer_than_three_distinct_points() -> None:
     with pytest.raises(DataIntegrityError):
         annotation_to_yolo(
             _annotation([[10, 10, 10, 10, 10, 10]], bbox=[10, 10, 1, 1]),
@@ -164,3 +195,14 @@ def test_annotation_to_yolo_rejects_mismatched_annotation_and_image_ids() -> Non
 
     with pytest.raises(DataIntegrityError):
         annotation_to_yolo(annotation, IMAGE, CATEGORY_TO_INDEX)
+
+
+@pytest.mark.parametrize("invalid_id", [None, "1", 1.0, True])
+def test_annotation_to_yolo_rejects_missing_or_noninteger_image_id(invalid_id: object) -> None:
+    annotation = _annotation()
+    image = {**IMAGE}
+    annotation["image_id"] = invalid_id
+    image["id"] = invalid_id
+
+    with pytest.raises(DataIntegrityError):
+        annotation_to_yolo(annotation, image, CATEGORY_TO_INDEX)

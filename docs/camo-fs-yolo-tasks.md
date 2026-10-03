@@ -2,7 +2,7 @@
 
 **Plan:** [camo-fs-yolo-plans.md](camo-fs-yolo-plans.md)  
 **Spec:** [camo-fs-yolo-spec.md](camo-fs-yolo-spec.md)  
-**Status:** In progress — T01 complete. Check a step only after its evidence exists.
+**Status:** In progress — T01 and T02 synthetic gates complete; real-data audit pending. Check a step only after its evidence exists.
 
 ## Dependency graph
 
@@ -45,10 +45,10 @@ The graph shows prerequisites, not an instruction to run experiments concurrentl
 **Produces:** `Taxonomy.from_test_json(path)`, `AuditReport`, `audit_shot(shot, paths, taxonomy)`; report holds deduplicated records, source paths, errors, warnings, and counts without writing data.  
 **Acceptance:** Global category mapping is sorted and contiguous; every shot requires exactly the selected official file pattern for all 47 categories; distinct objects with reused IDs survive; true duplicate content is deduplicated and logged; conflicting geometry/metadata and train/test overlap fail.
 
-- [ ] Write synthetic COCO fixture tests for unsorted/noncontiguous category IDs, taxonomy mismatch, missing or extra shot files, duplicated image metadata, exact duplicate content, conflicting same-image geometry, and train/test overlap. Include `test_reused_id_in_different_image_is_retained` with two objects sharing ID but different image/class and expected count `2`.
-- [ ] Run `pytest -q tests/test_annotations.py`; confirm expected missing-behavior failures.
-- [ ] Implement taxonomy and audit in one pass over selected files. Key images by `image_id`; require their filename/dimensions to agree across files and flag a filename mapped to different IDs. Use full annotation content/geometry keys; record reused IDs as warnings, never as global dedup keys. Validate file existence and declared versus actual image dimensions.
-- [ ] Run focused tests and then `pytest -q`; verify no test depends on the real CAMO-FS data.
+- [x] Write synthetic COCO fixture tests for unsorted/noncontiguous category IDs, taxonomy mismatch, missing or extra shot files, duplicated image metadata, exact duplicate content, conflicting same-image geometry, and train/test overlap. Include `test_reused_id_in_different_image_is_retained` with two objects sharing ID but different image/class and expected count `2`.
+- [x] Run `pytest -q tests/test_annotations.py`; confirm expected missing-behavior failures.
+- [x] Implement taxonomy and audit in one pass over selected files. Key images by `image_id`; require their filename/dimensions to agree across files and flag a filename mapped to different IDs. Use full annotation content/geometry keys; record reused IDs as warnings, never as global dedup keys. Validate file existence and declared versus actual image dimensions.
+- [x] Run focused tests and then `pytest -q`; verify no test depends on the real CAMO-FS data.
 - [ ] Read-only audit the local official JSON if present through `pytest -q -m real_data`; assert observed 1/2/3/5-shot counts. Do not rewrite any `data/` file. Keep this test separate from the synthetic suite's mandatory gate.
 
 ## T03 — Polygon validation and conversion

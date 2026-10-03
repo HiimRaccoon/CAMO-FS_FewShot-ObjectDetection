@@ -14,6 +14,9 @@ test = ["pytest>=8.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "real_data: read-only audit that requires CAMO_FS_DATA_ROOT",
+]
 
 [tool.setuptools.packages.find]
 include = ["camo_fs*"]

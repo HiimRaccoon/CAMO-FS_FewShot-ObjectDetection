@@ -2,7 +2,7 @@
 
 **Plan:** [camo-fs-yolo-plans.md](camo-fs-yolo-plans.md)  
 **Spec:** [camo-fs-yolo-spec.md](camo-fs-yolo-spec.md)  
-**Status:** In progress — T01 and T02 synthetic gates complete; real-data audit pending. Check a step only after its evidence exists.
+**Status:** In progress — T01 through T03 synthetic gates complete; real-data audit pending. Check a step only after its evidence exists.
 
 ## Dependency graph
 
@@ -58,11 +58,11 @@ The graph shows prerequisites, not an instruction to run experiments concurrentl
 **Produces:** `annotation_to_yolo(annotation, image, category_to_index) -> (line, multi_polygon)` and `DataIntegrityError`.  
 **Acceptance:** Every valid instance produces one normalized segmentation line. Multi-polygon components all contribute to the one YOLO sequence; the topology compromise is logged/visualized later. RLE, odd-length polygons, fewer than three points, invalid bbox or image size, non-finite/out-of-range coordinates, and unmapped categories raise a named error.
 
-- [ ] Write tests for exact normalization values, contiguous class mapping, simple polygon, two disconnected polygons, and each malformed input. For the two-component case, assert coordinates from **both** components survive and the output is one instance line.
-- [ ] Run `pytest -q tests/test_segments.py`; verify the expected red state.
-- [ ] Implement the validated conversion and a deterministic nearest-boundary segment joining policy compatible with a single Ultralytics polygon sequence. Do not discard any component; document connecting-edge topology loss in a code comment.
-- [ ] Run `pytest -q tests/test_segments.py` and `pytest -q`; check coordinates stay within `[0,1]` and contain an even number of values.
-- [ ] Add a small synthetic ground-truth render assertion or saved fixture view proving the merged outline can be inspected without real data.
+- [x] Write tests for exact normalization values, contiguous class mapping, simple polygon, two disconnected polygons, and each malformed input. For the two-component case, assert coordinates from **both** components survive and the output is one instance line.
+- [x] Run `pytest -q tests/test_segments.py`; verify the expected red state.
+- [x] Implement the validated conversion and a deterministic nearest-boundary segment joining policy compatible with a single Ultralytics polygon sequence. Do not discard any component; document connecting-edge topology loss in a code comment.
+- [x] Run `pytest -q tests/test_segments.py` and `pytest -q`; check coordinates stay within `[0,1]` and contain an even number of values.
+- [x] Add a small synthetic ground-truth render assertion or saved fixture view proving the merged outline can be inspected without real data.
 
 ## T04 — Audit-first materialization and preparation CLI
 

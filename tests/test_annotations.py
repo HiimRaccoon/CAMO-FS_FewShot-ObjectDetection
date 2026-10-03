@@ -165,6 +165,27 @@ def test_reused_id_in_different_image_is_retained(tmp_path: Path) -> None:
     assert "reused_annotation_id" in {issue.code for issue in report.warnings}
 
 
+def test_reused_id_tracks_all_image_class_contexts(tmp_path: Path) -> None:
+    paths, taxonomy = _paths_and_taxonomy(tmp_path)
+    _write_shot_file(
+        paths,
+        "Bat",
+        [_image(1, "bat.png")],
+        [_annotation(826, 1, 5, x=0)],
+    )
+    _write_shot_file(
+        paths,
+        "Fox",
+        [_image(2, "fox.png")],
+        [_annotation(826, 2, 20, x=0), _annotation(826, 2, 20, x=1)],
+    )
+
+    report = audit_shot(1, paths, taxonomy)
+
+    assert "reused_annotation_id" in {issue.code for issue in report.warnings}
+    assert "conflicting_annotation_id" in {issue.code for issue in report.errors}
+
+
 def test_audit_deduplicates_exact_annotation_content_and_reports_it(tmp_path: Path) -> None:
     paths, taxonomy = _paths_and_taxonomy(tmp_path)
     _write_complete_shot(paths)
@@ -180,6 +201,18 @@ def test_audit_deduplicates_exact_annotation_content_and_reports_it(tmp_path: Pa
 
     assert report.annotation_count == 2
     assert "duplicate_annotation" in {issue.code for issue in report.errors}
+
+
+def test_nonfinite_annotation_geometry_is_reported_not_crashed(tmp_path: Path) -> None:
+    paths, taxonomy = _paths_and_taxonomy(tmp_path)
+    _write_complete_shot(paths)
+    malformed = _annotation(8, 1, 5)
+    malformed["bbox"] = [float("nan"), 0, 1, 1]
+    _write_shot_file(paths, "Bat", [_image(1, "bat.png")], [malformed])
+
+    report = audit_shot(1, paths, taxonomy)
+
+    assert "invalid_annotation_geometry" in {issue.code for issue in report.errors}
 
 
 def test_audit_rejects_conflicting_image_metadata(tmp_path: Path) -> None:

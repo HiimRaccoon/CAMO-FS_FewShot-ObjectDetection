@@ -68,7 +68,7 @@ def audit_shot(shot: int, paths: DatasetPaths, taxonomy: Taxonomy) -> AuditRepor
     _audit_shot_file_set(shot, source_files, taxonomy, report)
 
     seen_annotation_content: set[str] = set()
-    seen_annotation_ids: dict[int, tuple[int, int, str]] = {}
+    seen_annotation_ids: dict[int, dict[tuple[int, int], str]] = {}
     filename_to_image_id: dict[str, int] = {}
 
     for source_file in source_files:
@@ -114,7 +114,7 @@ def _audit_training_document(
     taxonomy: Taxonomy,
     report: AuditReport,
     seen_annotation_content: set[str],
-    seen_annotation_ids: dict[int, tuple[int, int, str]],
+    seen_annotation_ids: dict[int, dict[tuple[int, int], str]],
     filename_to_image_id: dict[str, int],
 ) -> None:
     images = document.get("images")
@@ -206,7 +206,7 @@ def _audit_annotation(
     report: AuditReport,
     source_image_ids: set[int],
     seen_annotation_content: set[str],
-    seen_annotation_ids: dict[int, tuple[int, int, str]],
+    seen_annotation_ids: dict[int, dict[tuple[int, int], str]],
 ) -> None:
     annotation_id = annotation.get("id")
     image_id = annotation.get("image_id")
@@ -225,14 +225,25 @@ def _audit_annotation(
         )
         return
 
-    geometry_key = _canonical_json(
-        {
-            "image_id": image_id,
-            "category_id": category_id,
-            "bbox": annotation.get("bbox"),
-            "segmentation": annotation.get("segmentation"),
-        }
-    )
+    try:
+        geometry_key = _canonical_json(
+            {
+                "image_id": image_id,
+                "category_id": category_id,
+                "bbox": annotation.get("bbox"),
+                "segmentation": annotation.get("segmentation"),
+            }
+        )
+    except (TypeError, ValueError):
+        report.errors.append(
+            AuditIssue(
+                "invalid_annotation_geometry",
+                "Annotation geometry cannot be serialized as finite JSON",
+                image_id,
+                annotation_id,
+            )
+        )
+        return
     if geometry_key in seen_annotation_content:
         report.errors.append(
             AuditIssue("duplicate_annotation", "Duplicate annotation geometry", image_id, annotation_id)
@@ -240,19 +251,19 @@ def _audit_annotation(
         return
     seen_annotation_content.add(geometry_key)
 
-    identity = (image_id, category_id, geometry_key)
-    previous = seen_annotation_ids.get(annotation_id)
-    if previous is not None and previous != identity:
-        if previous[:2] == identity[:2]:
-            report.errors.append(
-                AuditIssue("conflicting_annotation_id", "Annotation id has conflicting geometry", image_id, annotation_id)
-            )
-        else:
+    context = (image_id, category_id)
+    known_contexts = seen_annotation_ids.setdefault(annotation_id, {})
+    previous_geometry = known_contexts.get(context)
+    if previous_geometry is None:
+        if known_contexts:
             report.warnings.append(
                 AuditIssue("reused_annotation_id", "Annotation id is reused by a distinct object", image_id, annotation_id)
             )
-    else:
-        seen_annotation_ids[annotation_id] = identity
+        known_contexts[context] = geometry_key
+    elif previous_geometry != geometry_key:
+        report.errors.append(
+            AuditIssue("conflicting_annotation_id", "Annotation id has conflicting geometry", image_id, annotation_id)
+        )
     report.annotations.append(annotation)
 
 

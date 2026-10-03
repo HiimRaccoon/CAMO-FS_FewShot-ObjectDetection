@@ -43,7 +43,7 @@ The graph shows prerequisites, not an instruction to run experiments concurrentl
 **Depends on:** T01.  
 **Files:** Create `camo_fs/annotations.py`, `tests/test_annotations.py`, `tests/test_real_data_audit.py` (marked `real_data`, skipped without local CAMO-FS).  
 **Produces:** `Taxonomy.from_test_json(path)`, `AuditReport`, `audit_shot(shot, paths, taxonomy)`; report holds deduplicated records, source paths, errors, warnings, and counts without writing data.  
-**Acceptance:** Global category mapping is sorted and contiguous; every shot requires exactly the selected official file pattern for all 47 categories; distinct objects with reused IDs survive; true duplicate content is deduplicated and logged; conflicting geometry/metadata and train/test overlap fail.
+**Acceptance:** Global category mapping is sorted and contiguous; every shot requires exactly the selected official file pattern for all 47 categories; distinct objects with reused IDs survive; exact duplicate content is deduplicated from merged records, reported as an integrity error, and prevents materialization; conflicting geometry/metadata and train/test overlap fail.
 
 - [x] Write synthetic COCO fixture tests for unsorted/noncontiguous category IDs, taxonomy mismatch, missing or extra shot files, duplicated image metadata, exact duplicate content, conflicting same-image geometry, and train/test overlap. Include `test_reused_id_in_different_image_is_retained` with two objects sharing ID but different image/class and expected count `2`.
 - [x] Run `pytest -q tests/test_annotations.py`; confirm expected missing-behavior failures.
